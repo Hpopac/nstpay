@@ -1,179 +1,471 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Debug Invoice System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice System</title>
 
 <style>
-body { font-family: Arial; padding: 20px; }
-input, button { padding: 10px; margin: 6px; width: 280px; }
-#result { white-space: pre-line; margin-top: 20px; padding:10px; background:#f4f4f4; }
-#log { white-space: pre-line; margin-top: 20px; padding:10px; background:#111; color:#0f0; height:200px; overflow:auto; }
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#f3f4f6;
+    font-family:Arial,Helvetica,sans-serif;
+    padding:20px;
+}
+
+.container{
+    width:100%;
+    max-width:480px;
+    background:white;
+    border-radius:16px;
+    padding:24px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+
+h2{
+    margin-top:0;
+    text-align:center;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin-bottom:12px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    font-size:15px;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:15px;
+}
+
+.primary{
+    background:#2563eb;
+    color:white;
+}
+
+.primary:hover{
+    background:#1d4ed8;
+}
+
+.secondary{
+    background:#16a34a;
+    color:white;
+}
+
+.secondary:hover{
+    background:#15803d;
+}
+
+#result{
+    display:none;
+    margin-top:16px;
+    padding:14px;
+    border-radius:8px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    white-space:pre-line;
+    word-break:break-word;
+}
+
+#copyBtn{
+    display:none;
+    margin-top:12px;
+}
+
+#mainBox{
+    display:none;
+}
+
+#status{
+    margin-top:10px;
+    text-align:center;
+    font-size:14px;
+    color:#666;
+}
+
+#log{
+    display:none;
+}
+
 </style>
 </head>
 
 <body>
 
-<h2>Invoice System (Debug Mode)</h2>
+<div class="container">
 
-<div id="loginBox">
-  <input id="username" placeholder="Username"><br>
-  <input id="token" placeholder="Token"><br>
-  <button onclick="login()">Login</button>
+    <h2>Invoice System</h2>
+
+    <div id="loginBox">
+
+        <input
+            id="username"
+            type="text"
+            placeholder="Username">
+
+        <input
+            id="token"
+            type="password"
+            placeholder="Token">
+
+        <button
+            class="primary"
+            onclick="login()">
+            Login
+        </button>
+
+    </div>
+
+    <div id="mainBox">
+
+        <input
+            id="amount"
+            type="number"
+            min="1"
+            placeholder="Amount">
+
+        <button
+            id="genBtn"
+            class="primary"
+            onclick="generate()">
+            Generate Receipt
+        </button>
+
+        <div id="result"></div>
+
+        <button
+            id="copyBtn"
+            class="secondary"
+            onclick="copyResult()">
+            Copy Payment Info
+        </button>
+
+    </div>
+
+    <div id="status"></div>
+
+    <div id="log"></div>
+
 </div>
-
-<div id="mainBox" style="display:none">
-
-  <input id="amount" placeholder="Amount"><br>
-  <button id="genBtn" onclick="generate()">Generate</button>
-
-  <div id="result"></div>
-  <button id="copyBtn" style="display:none" onclick="copy()">Copy</button>
-
-</div>
-
-<div id="log"></div>
 
 <script>
 
 const API_URL =
-"https://script.google.com/macros/s/AKfycbzFMMCyTYGQ6Chwuo56jM96JFHRBAD7YT6DLMVhdhpsHdvwMvrdfOtoBbQQLFaUjsk/exec";
+"https://script.google.com/macros/s/AKfycbyk4CHTgtY0ReIDSMj3F687ki7E8uJcuMdkC-Ia2SqgbRRsGAO2HeFrlAIxxhlAGOQ/exec";
 
-function log(msg) {
-  console.log(msg);
-  document.getElementById("log").innerText += msg + "\n";
+function log(msg){
+
+    console.log(msg);
+
+    const logDiv =
+        document.getElementById("log");
+
+    logDiv.innerText += msg + "\n";
 }
 
-window.onerror = function(msg, url, line) {
-  log("JS ERROR: " + msg + " | line: " + line);
-};
+function setStatus(text){
 
-window.onload = function() {
-  log("Page loaded");
-
-  const u = localStorage.getItem("username");
-  const t = localStorage.getItem("token");
-  const id = localStorage.getItem("uid");
-
-  log("Stored user: " + u + " | token: " + t + " | uid: " + id);
-
-  if (u && t && id) {
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("mainBox").style.display = "block";
-    log("Auto login success");
-  }
-};
-
-async function login() {
-
-  try {
-
-    const username = document.getElementById("username").value;
-    const token = document.getElementById("token").value;
-
-    log("LOGIN attempt: " + username);
-
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "auth",
-        username,
-        token
-      })
-    });
-
-    log("Auth response status: " + res.status);
-
-    const text = await res.text();
-    log("Auth raw response: " + text);
-
-    const data = JSON.parse(text);
-
-    if (!data.found) {
-      log("LOGIN FAILED");
-      alert("Invalid login");
-      return;
-    }
-
-    localStorage.setItem("username", username);
-    localStorage.setItem("token", token);
-    localStorage.setItem("uid", data.id);
-
-    log("LOGIN SUCCESS uid=" + data.id);
-
-    location.reload();
-
-  } catch (e) {
-    log("LOGIN ERROR: " + e.message);
-  }
+    document.getElementById("status")
+        .innerText = text;
 }
 
-async function generate() {
+window.onerror = function(msg,url,line){
 
-  try {
+    log(
+        "JS ERROR: " +
+        msg +
+        " line:" +
+        line
+    );
 
-    const username = localStorage.getItem("username");
-    const token = localStorage.getItem("token");
-    const uid = localStorage.getItem("uid");
-    const amount = Number(document.getElementById("amount").value);
+};
 
-    log("Generate request: " + amount);
+window.onload = function(){
 
-    if (!amount) {
-      log("ERROR: invalid amount");
-      return;
+    const username =
+        localStorage.getItem("username");
+
+    const token =
+        localStorage.getItem("token");
+
+    const uid =
+        localStorage.getItem("uid");
+
+    if(
+        username &&
+        token &&
+        uid
+    ){
+
+        document
+            .getElementById("loginBox")
+            .style.display = "none";
+
+        document
+            .getElementById("mainBox")
+            .style.display = "block";
+
+        setStatus(
+            "Logged in as " +
+            username
+        );
+
     }
 
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "receipt",
-        username,
-        token,
-        uid,
-        amount
-      })
-    });
+};
 
-    log("Receipt response status: " + res.status);
+async function login(){
 
-    const text = await res.text();
-    log("Raw receipt response: " + text);
+    try{
 
-    const data = JSON.parse(text);
+        const username =
+            document
+                .getElementById("username")
+                .value
+                .trim();
 
-    if (data.error) {
-      log("SERVER ERROR: " + data.error);
-      alert("Session invalid");
-      localStorage.clear();
-      location.reload();
-      return;
+        const token =
+            document
+                .getElementById("token")
+                .value
+                .trim();
+
+        if(!username || !token){
+
+            setStatus(
+                "Username and token required"
+            );
+
+            return;
+        }
+
+        setStatus(
+            "Checking account..."
+        );
+
+        const res =
+            await fetch(
+                API_URL,
+                {
+                    method:"POST",
+                    body:JSON.stringify({
+                        action:"auth",
+                        username:username,
+                        token:token
+                    })
+                }
+            );
+
+        const text =
+            await res.text();
+
+        log(text);
+
+        const data =
+            JSON.parse(text);
+
+        if(!data.found){
+
+            setStatus(
+                "Invalid username or token"
+            );
+
+            return;
+        }
+
+        localStorage.setItem(
+            "username",
+            username
+        );
+
+        localStorage.setItem(
+            "token",
+            token
+        );
+
+        localStorage.setItem(
+            "uid",
+            data.id
+        );
+
+        location.reload();
+
+    }
+    catch(ex){
+
+        console.error(ex);
+
+        setStatus(
+            "Connection error"
+        );
     }
 
-    const final =
+}
+
+async function generate(){
+
+    try{
+
+        const amount =
+            Number(
+                document
+                    .getElementById("amount")
+                    .value
+            );
+
+        if(!amount){
+
+            setStatus(
+                "Enter amount"
+            );
+
+            return;
+        }
+
+        setStatus(
+            "Generating receipt..."
+        );
+
+        const response =
+            await fetch(
+                API_URL,
+                {
+                    method:"POST",
+                    body:JSON.stringify({
+
+                        action:"receipt",
+
+                        username:
+                            localStorage.getItem("username"),
+
+                        token:
+                            localStorage.getItem("token"),
+
+                        uid:
+                            localStorage.getItem("uid"),
+
+                        amount:
+                            amount
+                    })
+                }
+            );
+
+        const text =
+            await response.text();
+
+        log(text);
+
+        const data =
+            JSON.parse(text);
+
+        if(data.error){
+
+            localStorage.clear();
+
+            setStatus(
+                "Session expired"
+            );
+
+            location.reload();
+
+            return;
+        }
+
+        const paymentText =
 `IBAN: ${data.iban}
+
 Receipt: ${data.receiptId}
+
 Company: ${data.name}
+
 Note: ${data.note}`;
 
-    document.getElementById("result").innerText = final;
+        document
+            .getElementById("result")
+            .innerText =
+            paymentText;
 
-    document.getElementById("genBtn").style.display = "none";
-    document.getElementById("copyBtn").style.display = "block";
+        document
+            .getElementById("result")
+            .style.display =
+            "block";
 
-    window.finalText = final;
+        document
+            .getElementById("genBtn")
+            .style.display =
+            "none";
 
-    log("RECEIPT GENERATED SUCCESS");
+        document
+            .getElementById("copyBtn")
+            .style.display =
+            "block";
 
-  } catch (e) {
-    log("GENERATE ERROR: " + e.message);
-  }
+        window.paymentText =
+            paymentText;
+
+        setStatus(
+            "Receipt generated successfully"
+        );
+
+    }
+    catch(ex){
+
+        console.error(ex);
+
+        setStatus(
+            "Failed to generate receipt"
+        );
+    }
+
 }
 
-function copy() {
-  navigator.clipboard.writeText(window.finalText);
-  log("Copied to clipboard");
-  location.reload();
+async function copyResult(){
+
+    try{
+
+        await navigator
+            .clipboard
+            .writeText(
+                window.paymentText
+            );
+
+        setStatus(
+            "Copied"
+        );
+
+        setTimeout(
+            ()=>{
+                location.reload();
+            },
+            500
+        );
+
+    }
+    catch(ex){
+
+        console.error(ex);
+
+        setStatus(
+            "Copy failed"
+        );
+    }
+
 }
 
 </script>
